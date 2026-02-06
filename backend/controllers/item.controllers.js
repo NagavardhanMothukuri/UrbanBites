@@ -4,7 +4,8 @@ import uploadOnCloudinary from "../utils/cloudinary.js";
 
 export const addItem = async (req, res) => {
     try {
-        const { name, category, foodType, price } = req.body
+        const { name, category, foodType, price, discount } = req.body
+        const discountNum = Number(discount) || 0
         let image;
         if (req.file) {
             image = await uploadOnCloudinary(req.file.path)
@@ -14,7 +15,7 @@ export const addItem = async (req, res) => {
             return res.status(400).json({ message: "shop not found" })
         }
         const item = await Item.create({
-            name, category, foodType, price, image, shop: shop._id
+            name, category, foodType, price, discount: discountNum, image, shop: shop._id
         })
 
         shop.items.push(item._id)
@@ -34,13 +35,14 @@ export const addItem = async (req, res) => {
 export const editItem = async (req, res) => {
     try {
         const itemId = req.params.itemId
-        const { name, category, foodType, price } = req.body
+        const { name, category, foodType, price, discount } = req.body
+        const discountNum = Number(discount) || 0
         let image;
         if (req.file) {
             image = await uploadOnCloudinary(req.file.path)
         }
         const item = await Item.findByIdAndUpdate(itemId, {
-            name, category, foodType, price, image
+            name, category, foodType, price, discount: discountNum, image
         }, { new: true })
         if (!item) {
             return res.status(400).json({ message: "item not found" })

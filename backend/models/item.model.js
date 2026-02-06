@@ -42,6 +42,12 @@ const itemSchema = new mongoose.Schema({
    rating:{
     average:{type:Number,default:0},
     count:{type:Number,default:0}
+   },
+   discount:{
+    type:Number,
+    min:0,
+    max:100,
+    default:10
    }
 }, { timestamps: true })
 

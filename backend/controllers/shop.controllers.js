@@ -3,7 +3,7 @@ import uploadOnCloudinary from "../utils/cloudinary.js";
 
 export const createEditShop=async (req,res) => {
     try {
-       const {name,city,state,address}=req.body
+       const {name,city,state,address,upiId}=req.body
        let image;
        if(req.file){
         console.log(req.file)
@@ -12,11 +12,11 @@ export const createEditShop=async (req,res) => {
        let shop=await Shop.findOne({owner:req.userId})
        if(!shop){
         shop=await Shop.create({
-        name,city,state,address,image,owner:req.userId
+        name,city,state,address,image,upiId,owner:req.userId
        })
        }else{
          shop=await Shop.findByIdAndUpdate(shop._id,{
-        name,city,state,address,image,owner:req.userId
+        name,city,state,address,image,upiId,owner:req.userId
        },{new:true})
        }
       

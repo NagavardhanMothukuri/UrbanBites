@@ -16,6 +16,7 @@ function EditItem() {
    const [currentItem,setCurrentItem]=useState(null)
     const [name, setName] = useState("")
     const [price, setPrice] = useState(0)
+    const [discount, setDiscount] = useState(0)
     const [frontendImage, setFrontendImage] = useState("")
     const [backendImage, setBackendImage] = useState(null)
     const [category, setCategory] = useState("")
@@ -48,6 +49,7 @@ function EditItem() {
             formData.append("category",category)
             formData.append("foodType", foodType)
             formData.append("price", price)
+            formData.append("discount", discount)
             if (backendImage) {
                 formData.append("image", backendImage)
             }
@@ -77,6 +79,7 @@ function EditItem() {
     useEffect(()=>{
      setName(currentItem?.name || "")
      setPrice(currentItem?.price || 0)
+     setDiscount(currentItem?.discount || 0)
      setCategory(currentItem?.category || "")
      setFoodType(currentItem?.foodType || "")
      setFrontendImage(currentItem?.image || "")
@@ -119,6 +122,19 @@ function EditItem() {
                             value={price}
                         />
                     </div>
+                    <div>
+                        <label className='block text-sm font-medium text-gray-700 mb-1'>Discount (%)</label>
+                        <input type="number" placeholder='0' min="0" max="100" className='w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500'
+                            onChange={(e) => setDiscount(e.target.value)}
+                            value={discount}
+                        />
+                    </div>
+                    {discount > 0 && (
+                        <div>
+                            <label className='block text-sm font-medium text-gray-700 mb-1'>Discounted Price</label>
+                            <span className="line-through text-gray-500">₹{price}</span> <span className="font-bold text-green-600">₹{Math.round(price * (1 - discount / 100))}</span>
+                        </div>
+                    )}
                     <div>
                         <label className='block text-sm font-medium text-gray-700 mb-1'>Select Category</label>
                         <select className='w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500'

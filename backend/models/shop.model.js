@@ -26,6 +26,10 @@ const shopSchema=new mongoose.Schema({
         type:String,
         required:true
     },
+    upiId:{
+        type:String,
+        default:""
+    },
     items:[{
         type:mongoose.Schema.Types.ObjectId,
         ref:"Item"

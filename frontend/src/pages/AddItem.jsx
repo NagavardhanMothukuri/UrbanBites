@@ -15,6 +15,7 @@ function AddItem() {
     const [loading,setLoading]=useState(false)
     const [name, setName] = useState("")
     const [price, setPrice] = useState(0)
+    const [discount, setDiscount] = useState(0)
     const [frontendImage, setFrontendImage] = useState(null)
     const [backendImage, setBackendImage] = useState(null)
     const [category, setCategory] = useState("")
@@ -46,6 +47,7 @@ function AddItem() {
             formData.append("category",category)
             formData.append("foodType", foodType)
             formData.append("price", price)
+            formData.append("discount", discount)
             if (backendImage) {
                 formData.append("image", backendImage)
             }
@@ -94,6 +96,13 @@ function AddItem() {
                         <input type="number" placeholder='0' className='w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500'
                             onChange={(e) => setPrice(e.target.value)}
                             value={price}
+                        />
+                    </div>
+                    <div>
+                        <label className='block text-sm font-medium text-gray-700 mb-1'>Discount (%)</label>
+                        <input type="number" placeholder='0' min="0" max="100" className='w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500'
+                            onChange={(e) => setDiscount(e.target.value)}
+                            value={discount}
                         />
                     </div>
                     <div>

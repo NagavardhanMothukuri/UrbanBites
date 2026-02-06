@@ -58,7 +58,7 @@ const orderSchema = new mongoose.Schema({
     },
     paymentMethod: {
         type: String,
-        enum: ['cod', "online"],
+        enum: ['cod', "online", "upi"],
         required: true
     },
     deliveryAddress: {
@@ -82,6 +82,22 @@ const orderSchema = new mongoose.Schema({
    razorpayPaymentId:{
     type:String,
        default:""
+   },
+   upiId:{
+    type:String,
+    default:""
+   },
+   upiQrCode:{
+    type:String,
+    default:""
+   },
+   transactionId:{
+    type:String,
+    default:""
+   },
+   upiPaymentExpiry:{
+    type:Date,
+    default:null
    }
 }, { timestamps: true })
 

@@ -9,6 +9,8 @@ import FoodCard from './FoodCard';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { serverUrl } from '../App';
+import { useTheme } from '../context/ThemeContext';
+
 
 function UserDashboard() {
   const {currentCity,shopInMyCity,itemsInMyCity,searchItems}=useSelector(state=>state.user)
@@ -20,6 +22,8 @@ function UserDashboard() {
    const [showLeftShopButton,setShowLeftShopButton]=useState(false)
   const [showRightShopButton,setShowRightShopButton]=useState(false)
   const [updatedItemsList,setUpdatedItemsList]=useState([])
+  const { currentMode, theme } = useTheme()
+
 
 const handleFilterByCategory=(category)=>{
 if(category=="All"){
@@ -80,12 +84,12 @@ setRightButton(element.scrollLeft+element.clientWidth<element.scrollWidth)
 
 
   return (
-    <div className='w-screen min-h-screen flex flex-col gap-5 items-center bg-[#fff9f6] overflow-y-auto'>
+    <div className={`w-screen min-h-screen flex flex-col gap-5 items-center overflow-y-auto transition-all duration-500 ${currentMode.bg}`}>
       <Nav />
 
       {searchItems && searchItems.length>0 && (
-        <div className='w-full max-w-6xl flex flex-col gap-5 items-start p-5 bg-white shadow-md rounded-2xl mt-4'>
-<h1 className='text-gray-900 text-2xl sm:text-3xl font-semibold border-b border-gray-200 pb-2'>
+        <div className={`w-full max-w-6xl flex flex-col gap-5 items-start p-5 shadow-md rounded-2xl mt-4 ${currentMode.card}`}>
+<h1 className={`text-2xl sm:text-3xl font-semibold border-b pb-2 ${currentMode.text} ${currentMode.border}`}>
   Search Results
 </h1>
 <div className='w-full h-auto flex flex-wrap gap-6 justify-center'>
@@ -98,9 +102,9 @@ setRightButton(element.scrollLeft+element.clientWidth<element.scrollWidth)
 
       <div className="w-full max-w-6xl flex flex-col gap-5 items-start p-[10px]">
 
-        <h1 className='text-gray-800 text-2xl sm:text-3xl'>Inspiration for your first order</h1>
+        <h1 className={`text-2xl sm:text-3xl ${currentMode.text}`}>Inspiration for your first order</h1>
         <div className='w-full relative'>
-          {showLeftCateButton &&  <button className='absolute left-0 top-1/2 -translate-y-1/2 bg-[#ff4d2d] text-white p-2 rounded-full shadow-lg hover:bg-[#e64528] z-10' onClick={()=>scrollHandler(cateScrollRef,"left")}><FaCircleChevronLeft />
+          {showLeftCateButton &&  <button className={`absolute left-0 top-1/2 -translate-y-1/2 text-white p-2 rounded-full shadow-lg z-10 bg-gradient-to-r ${theme.gradient}`} onClick={()=>scrollHandler(cateScrollRef,"left")}><FaCircleChevronLeft />
           </button>}
          
 
@@ -109,7 +113,7 @@ setRightButton(element.scrollLeft+element.clientWidth<element.scrollWidth)
               <CategoryCard name={cate.category} image={cate.image} key={index} onClick={()=>handleFilterByCategory(cate.category)}/>
             ))}
           </div>
-          {showRightCateButton &&  <button className='absolute right-0 top-1/2 -translate-y-1/2 bg-[#ff4d2d] text-white p-2 rounded-full shadow-lg hover:bg-[#e64528] z-10' onClick={()=>scrollHandler(cateScrollRef,"right")}>
+          {showRightCateButton &&  <button className={`absolute right-0 top-1/2 -translate-y-1/2 text-white p-2 rounded-full shadow-lg z-10 bg-gradient-to-r ${theme.gradient}`} onClick={()=>scrollHandler(cateScrollRef,"right")}>
 <FaCircleChevronRight />
           </button>}
          
@@ -117,9 +121,9 @@ setRightButton(element.scrollLeft+element.clientWidth<element.scrollWidth)
       </div>
 
       <div className='w-full max-w-6xl flex flex-col gap-5 items-start p-[10px]'>
- <h1 className='text-gray-800 text-2xl sm:text-3xl'>Best Shop in {currentCity}</h1>
+ <h1 className={`text-2xl sm:text-3xl ${currentMode.text}`}>Best Shop in {currentCity}</h1>
  <div className='w-full relative'>
-          {showLeftShopButton &&  <button className='absolute left-0 top-1/2 -translate-y-1/2 bg-[#ff4d2d] text-white p-2 rounded-full shadow-lg hover:bg-[#e64528] z-10' onClick={()=>scrollHandler(shopScrollRef,"left")}><FaCircleChevronLeft />
+          {showLeftShopButton &&  <button className={`absolute left-0 top-1/2 -translate-y-1/2 text-white p-2 rounded-full shadow-lg z-10 bg-gradient-to-r ${theme.gradient}`} onClick={()=>scrollHandler(shopScrollRef,"left")}><FaCircleChevronLeft />
           </button>}
          
 
@@ -128,7 +132,7 @@ setRightButton(element.scrollLeft+element.clientWidth<element.scrollWidth)
               <CategoryCard name={shop.name} image={shop.image} key={index} onClick={()=>navigate(`/shop/${shop._id}`)}/>
             ))}
           </div>
-          {showRightShopButton &&  <button className='absolute right-0 top-1/2 -translate-y-1/2 bg-[#ff4d2d] text-white p-2 rounded-full shadow-lg hover:bg-[#e64528] z-10' onClick={()=>scrollHandler(shopScrollRef,"right")}>
+          {showRightShopButton &&  <button className={`absolute right-0 top-1/2 -translate-y-1/2 text-white p-2 rounded-full shadow-lg z-10 bg-gradient-to-r ${theme.gradient}`} onClick={()=>scrollHandler(shopScrollRef,"right")}>
 <FaCircleChevronRight />
           </button>}
          
@@ -136,7 +140,7 @@ setRightButton(element.scrollLeft+element.clientWidth<element.scrollWidth)
       </div>
 
       <div className='w-full max-w-6xl flex flex-col gap-5 items-start p-[10px]'>
-       <h1 className='text-gray-800 text-2xl sm:text-3xl'>
+       <h1 className={`text-2xl sm:text-3xl ${currentMode.text}`}>
         Suggested Food Items
        </h1>
 
@@ -153,5 +157,6 @@ setRightButton(element.scrollLeft+element.clientWidth<element.scrollWidth)
     </div>
   )
 }
+
 
 export default UserDashboard

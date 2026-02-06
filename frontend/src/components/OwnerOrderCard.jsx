@@ -40,7 +40,7 @@ const dispatch=useDispatch()
             <div className='flex space-x-4 overflow-x-auto pb-2'>
                 {data.shopOrders.shopOrderItems.map((item, index) => (
                     <div key={index} className='flex-shrink-0 w-40 border rounded-lg p-2 bg-white"'>
-                        <img src={item.item.image} alt="" className='w-full h-24 object-cover rounded' />
+                        <img src={item.item?.image || null} alt="" className='w-full h-24 object-cover rounded' />
                         <p className='text-sm font-semibold mt-1'>{item.name}</p>
                         <p className='text-xs text-gray-500'>Qty: {item.quantity} x ₹{item.price}</p>
                     </div>

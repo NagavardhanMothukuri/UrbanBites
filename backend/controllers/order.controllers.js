@@ -5,6 +5,7 @@ import User from "../models/user.model.js"
 import { sendDeliveryOtpMail } from "../utils/mail.js"
 import RazorPay from "razorpay"
 import dotenv from "dotenv"
+import { count } from "console"
 
 dotenv.config()
 let instance = new RazorPay({
@@ -54,26 +55,78 @@ export const placeOrder = async (req, res) => {
         ))
 
         if (paymentMethod == "online") {
-            const razorOrder = await instance.orders.create({
-                amount: Math.round(totalAmount * 100),
-                currency: 'INR',
-                receipt: `receipt_${Date.now()}`
-            })
+            // Validate amount
+            if (!totalAmount || totalAmount <= 0) {
+                return res.status(400).json({ message: "Invalid order amount" })
+            }
+
+            try {
+                const razorOrder = await instance.orders.create({
+                    amount: Math.round(totalAmount * 100),
+                    currency: 'INR',
+                    receipt: `receipt_${Date.now()}`,
+                    notes: {
+                        userId: req.userId.toString(),
+                        orderType: "food_delivery"
+                    }
+                })
+
+                const newOrder = await Order.create({
+                    user: req.userId,
+                    paymentMethod,
+                    deliveryAddress,
+                    totalAmount,
+                    shopOrders,
+                    razorpayOrderId: razorOrder.id,
+                    payment: false
+                })
+
+                return res.status(200).json({
+                    razorOrder: {
+                        id: razorOrder.id,
+                        amount: razorOrder.amount,
+                        currency: razorOrder.currency,
+                        receipt: razorOrder.receipt
+                    },
+                    orderId: newOrder._id,
+                })
+            } catch (razorpayError) {
+                console.error("Razorpay order creation failed:", razorpayError)
+                return res.status(500).json({ message: "Payment gateway error. Please try again." })
+            }
+
+
+        } else if (paymentMethod == "upi") {
+            // Assuming single shop for UPI, take from first shop
+            const firstShopId = Object.keys(groupItemsByShop)[0]
+            const shop = await Shop.findById(firstShopId)
+            if (!shop || !shop.upiId) {
+                return res.status(400).json({ message: "Shop UPI ID not found" })
+            }
+            const transactionId = `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+            const upiPaymentExpiry = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
+            // Generate QR code URL (placeholder, in real app use a QR service)
+            const upiQrCode = `upi://pay?pa=${shop.upiId}&pn=${shop.name}&am=${totalAmount}&cu=INR&tn=${transactionId}`
+
             const newOrder = await Order.create({
                 user: req.userId,
                 paymentMethod,
                 deliveryAddress,
                 totalAmount,
                 shopOrders,
-                razorpayOrderId: razorOrder.id,
+                upiId: shop.upiId,
+                upiQrCode,
+                transactionId,
+                upiPaymentExpiry,
                 payment: false
             })
 
             return res.status(200).json({
-                razorOrder,
-                orderId: newOrder._id,
+                order: newOrder,
+                upiId: shop.upiId,
+                upiQrCode,
+                transactionId
             })
-
         }
 
         const newOrder = await Order.create({
@@ -118,7 +171,21 @@ export const placeOrder = async (req, res) => {
 
 export const verifyPayment = async (req, res) => {
     try {
-        const { razorpay_payment_id, orderId } = req.body
+        const { razorpay_payment_id, razorpay_order_id, razorpay_signature, orderId } = req.body
+        
+        // Verify signature
+        const crypto = await import('crypto')
+        const body = razorpay_order_id + "|" + razorpay_payment_id
+        const expectedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+            .update(body.toString())
+            .digest('hex')
+        
+        const isAuthentic = expectedSignature === razorpay_signature
+        
+        if (!isAuthentic) {
+            return res.status(400).json({ message: "Invalid payment signature" })
+        }
+
         const payment = await instance.payments.fetch(razorpay_payment_id)
         if (!payment || payment.status != "captured") {
             return res.status(400).json({ message: "payment not captured" })
@@ -130,7 +197,9 @@ export const verifyPayment = async (req, res) => {
 
         order.payment = true
         order.razorpayPaymentId = razorpay_payment_id
+        order.razorpaySignature = razorpay_signature
         await order.save()
+
 
         await order.populate("shopOrders.shopOrderItems.item", "name image price")
         await order.populate("shopOrders.shop", "name")
@@ -532,7 +601,114 @@ export const verifyDeliveryOtp = async (req, res) => {
     }
 }
 
+export const verifyUtr = async (req, res) => {
+    try {
+        const { orderId, utr } = req.body
+        const order = await Order.findById(orderId)
+        if (!order) {
+            return res.status(400).json({ message: "order not found" })
+        }
+        if (order.payment) {
+            return res.status(400).json({ message: "payment already verified" })
+        }
+        // In real implementation, you would verify UTR with bank API or match with transaction
+        // For now, just mark as paid if UTR is provided
+        order.payment = true
+        await order.save()
+
+        await order.populate("shopOrders.shopOrderItems.item", "name image price")
+        await order.populate("shopOrders.shop", "name")
+        await order.populate("shopOrders.owner", "name socketId")
+        await order.populate("user", "name email mobile")
+
+        const io = req.app.get('io')
+
+        if (io) {
+            order.shopOrders.forEach(shopOrder => {
+                const ownerSocketId = shopOrder.owner.socketId
+                if (ownerSocketId) {
+                    io.to(ownerSocketId).emit('newOrder', {
+                        _id: order._id,
+                        paymentMethod: order.paymentMethod,
+                        user: order.user,
+                        shopOrders: shopOrder,
+                        createdAt: order.createdAt,
+                        deliveryAddress: order.deliveryAddress,
+                        payment: order.payment
+                    })
+                }
+            });
+        }
+
+        return res.status(200).json(order)
+
+    } catch (error) {
+        return res.status(500).json({ message: `verify UTR error ${error}` })
+    }
+}
+
+export const upiStatus = async (req, res) => {
+    try {
+        const { orderId } = req.params
+        const order = await Order.findById(orderId)
+        if (!order) {
+            return res.status(400).json({ message: "order not found" })
+        }
+        const now = new Date()
+        const isExpired = order.upiPaymentExpiry && now > order.upiPaymentExpiry
+        return res.status(200).json({
+            payment: order.payment,
+            isExpired
+        })
+    } catch (error) {
+        return res.status(500).json({ message: `upi status error ${error}` })
+    }
+}
+
+export const getTodayDeliveries=async (req,res) => {
+    try {
+        const deliveryBoyId=req.userId
+        const startsOfDay=new Date()
+        startsOfDay.setHours(0,0,0,0)
+
+        const orders=await Order.find({
+           "shopOrders.assignedDeliveryBoy":deliveryBoyId,
+           "shopOrders.status":"delivered",
+           "shopOrders.deliveredAt":{$gte:startsOfDay}
+        }).lean()
+
+     let todaysDeliveries=[]
+
+     orders.forEach(order=>{
+        order.shopOrders.forEach(shopOrder=>{
+            if(shopOrder.assignedDeliveryBoy==deliveryBoyId &&
+                shopOrder.status=="delivered" &&
+                shopOrder.deliveredAt &&
+                shopOrder.deliveredAt>=startsOfDay
+            ){
+                todaysDeliveries.push(shopOrder)
+            }
+        })
+     })
+
+let stats={}
+
+todaysDeliveries.forEach(shopOrder=>{
+    const hour=new Date(shopOrder.deliveredAt).getHours()
+    stats[hour]=(stats[hour] || 0) + 1
+})
+
+let formattedStats=Object.keys(stats).map(hour=>({
+ hour:parseInt(hour),
+ count:stats[hour]
+}))
+
+formattedStats.sort((a,b)=>a.hour-b.hour)
+
+return res.status(200).json(formattedStats)
 
 
-
-
+    } catch (error) {
+        return res.status(500).json({ message: `today deliveries error ${error}` })
+    }
+}
